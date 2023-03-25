@@ -1,9 +1,5 @@
 #include "lamadil.h"
 
-void start()
-{
-}
-
 uint32 speed_x = 4;
 uint32 speed_y = 4;
 uint32 x = 50;
@@ -27,10 +23,13 @@ uint32 color_speed3 = 1;
 uint32 ldply = 0;
 uint32 ldplspeed = 1;
 
+void start()
+{
+}
+
 void update()
 {
     fill_screen(create_color(color, color2, color3));
-
     for(uint32 iy = 0; iy < 64; ++iy)
     {
         for(uint32 ix = 0; ix < 64; ++ix)

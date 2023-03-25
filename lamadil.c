@@ -14,21 +14,12 @@ Color create_color(uint32 red, uint32 green, uint32 blue)
     return (blue << 10) | (green << 5) | red;
 }
 
-void fill_screen(Color color)
-{
-    uint32 * screen_buffer_pointer = (uint32*) screen_buffer;
-    uint32 color_value = (color << 16) | color;
-    for(uint32 i = 0; i < 160; ++i)
-    {
-        REPEAT240(*screen_buffer_pointer++ = color_value;)
-    }
-}
-
-typedef struct BLOCK { uint32 data[8]; } BLOCK;
+#define blocksize 8
+typedef struct BLOCK { uint32 data[blocksize]; } BLOCK;
 
 void memcpy32(void *dst, const void *src, uint32 wdcount)
 {
-    uint32 blkN= wdcount/8, wdN= wdcount&7;
+    uint32 blkN= wdcount/blocksize, wdN= wdcount&(blocksize-1);
     uint32 *dstw= (uint32*)dst, *srcw= (uint32*)src;
     if(blkN)
     {
@@ -41,6 +32,34 @@ void memcpy32(void *dst, const void *src, uint32 wdcount)
     // Residual words
     while(wdN--)
         *dstw++ = *srcw++;
+}
+
+void memset32(void *dst, uint32 value, uint32 wdcount)
+{
+    uint32 valuex[8] = {value, value, value, value, value, value, value, value};
+    uint32 blkN= wdcount/blocksize, wdN= wdcount&(blocksize-1);
+    uint32 *dstw= (uint32*)dst, *srcw= valuex;
+    if(blkN)
+    {
+        // 8-word copies
+        BLOCK *dst2= (BLOCK*)dst, *src2= (BLOCK*)&valuex;
+        while(blkN--)
+            *dst2++ = *src2;
+        dstw= (uint32*)dst2;  srcw= (uint32*)src2;
+    }
+    // Residual words
+    while(wdN--)
+        *dstw++ = *srcw;
+}
+
+void fill_screen(Color color)
+{
+    uint32 color_value = (color << 16) | color;
+    uint32 * screen_buffer_pointer = (uint32*) screen_buffer;
+    for(uint32 i = 0; i < 160; ++i)
+    {
+        REPEAT240(*screen_buffer_pointer++ = color_value;)
+    }
 }
 
 void set_pixel(uint32 x, uint32 y, Color color)
