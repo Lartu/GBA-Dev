@@ -478,4 +478,5 @@ void update();
 void start();
 
 #include <string.h>
+#include "sin_table.c"
 #include "lamadil.c"

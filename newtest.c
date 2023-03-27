@@ -20,21 +20,27 @@ uint32 color_speed2 = 1;
 uint32 color3 = 20;
 uint32 color_speed3 = 1;
 
-uint32 ldply = 0;
-uint32 ldplspeed = 1;
+uint32 ldpl_timer = 0;
 
-void start()
+inline void start()
 {
 }
 
-void update()
+inline void update()
 {
     fill_screen(create_color(color, color2, color3));
 
-    draw_sprite(0, ldply, bitmap, 64, 64);
+    draw_sprite(0, 28 + (lam_sin(ldpl_timer)>>8), bitmap, 64, 64);
+    draw_sprite(64, 28 + (lam_sin(ldpl_timer + (PI / 4))>>8), bitmap, 64, 64);
+    draw_sprite(128, 28 + (lam_sin(ldpl_timer + (PI / 2))>>8), bitmap, 64, 64);
+    draw_sprite(128+64, 28 + (lam_sin(ldpl_timer + (PI * 3/ 4))>>8), bitmap, 64, 64);
 
-    ldply += ldplspeed;
-    if(ldply == 0 || ldply == 160-64) ldplspeed = -ldplspeed;
+    draw_sprite(0, 68 + (lam_sin(ldpl_timer- (PI))>>8), bitmap, 64, 64);
+    draw_sprite(64, 68 + (lam_sin(ldpl_timer - (PI / 4))>>8), bitmap, 64, 64);
+    draw_sprite(128, 68 + (lam_sin(ldpl_timer - (PI / 2))>>8), bitmap, 64, 64);
+    draw_sprite(128+64, 68 + (lam_sin(ldpl_timer - (PI * 3/ 4))>>8), bitmap, 64, 64);
+
+    ldpl_timer += PI/16;
     
     color += color_speed;
     if(color == 0 || color == 31) color_speed = -color_speed;
@@ -43,7 +49,7 @@ void update()
     color3 += color_speed3;
     if(color3 == 0 || color3 == 31) color_speed3 = -color_speed3;
 
-    for(int iy = 0; iy < 32; ++iy){
+    /*for(int iy = 0; iy < 32; ++iy){
         for(int ix = 0; ix < 32; ++ix){
             set_pixel(x+ix, y+iy, create_color(31-screen_buffer[(x+ix) + (y+iy) * screen_width], 31-screen_buffer[(x+ix) + (y+iy) * screen_width], 31-screen_buffer[(x+ix) + (y+iy) * screen_width]));
         }
@@ -59,7 +65,7 @@ void update()
         for(int ix = 0; ix < 32; ++ix){
             set_pixel(x3+ix, y3+iy, create_color(screen_buffer[(x3+ix) + (y3+iy) * screen_width], screen_buffer[(x3+ix) + (y3+iy) * screen_width], screen_buffer[(x3+ix) + (y3+iy) * screen_width]));
         }
-    }
+    }*/
 
     x += speed_x;
     y += speed_y;
