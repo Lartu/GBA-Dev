@@ -30,15 +30,8 @@ void start()
 void update()
 {
     fill_screen(create_color(color, color2, color3));
-    for(uint32 iy = 0; iy < 64; ++iy)
-    {
-        for(uint32 ix = 0; ix < 64; ++ix)
-        {
-            // TODO: esto es re optimizable haciendo una
-            // funcion de sprites custom que memcopyee
-            set_pixel(ix, iy + ldply, bitmap[ix + iy*64]);
-        }
-    }
+
+    draw_sprite(0, ldply, bitmap, 64, 64);
 
     ldply += ldplspeed;
     if(ldply == 0 || ldply == 160-64) ldplspeed = -ldplspeed;

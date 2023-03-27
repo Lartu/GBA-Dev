@@ -55,16 +55,21 @@ void memset32(void *dst, uint32 value, uint32 wdcount)
 void fill_screen(Color color)
 {
     uint32 color_value = (color << 16) | color;
-    uint32 * screen_buffer_pointer = (uint32*) screen_buffer;
-    for(uint32 i = 0; i < 160; ++i)
-    {
-        REPEAT240(*screen_buffer_pointer++ = color_value;)
-    }
+    memset32(screen_buffer, color_value, screen_pixels/2);
 }
 
 void set_pixel(uint32 x, uint32 y, Color color)
 {
     screen_buffer[x + y * screen_width] = color;
+}
+
+void draw_sprite(uint32 x, uint32 y, const uint16 * sprite, uint32 w, uint32 h)
+{
+    const uint32 half_width = w/2;
+    for(uint32 _h = 0; _h < h; ++_h)
+    {
+        memcpy32(screen_buffer + (x + (y+_h) * screen_width), sprite + (_h * w), half_width);
+    }
 }
 
 int lamadil_start()
@@ -92,3 +97,6 @@ int lamadil_start()
     }
     return 0;
 }
+
+
+// SEGURO podria optimizar esto si el buffer fuera de 32 bits.
