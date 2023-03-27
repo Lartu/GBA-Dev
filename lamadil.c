@@ -97,6 +97,11 @@ inline int32 lam_sin(uint32 alpha)
     // values desired.
 }
 
+inline int32 lam_cos(uint32 alpha)
+{
+    return lam_sin(alpha + (PI/2));
+}
+
 int lamadil_start()
 {
     set_video_mode();
