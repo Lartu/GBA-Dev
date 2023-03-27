@@ -29,15 +29,16 @@ inline void start()
 
 inline void update()
 {
-    fill_screen(create_color(color, color2, color3));
+    //fill_screen(create_color(color, color2, color3));
+    fill_screen(create_color(31, 20, 0));
     
-    /*draw_sprite(0, -40 + 28 + (lam_cos(ldpl_timer)>>8), bitmap, 64, 64);
-    draw_sprite(64, -40 + 28 + (lam_cos(ldpl_timer + (PI / 4))>>8), bitmap, 64, 64);
-    draw_sprite(128, -40 + 28 + (lam_cos(ldpl_timer + (PI / 2))>>8), bitmap, 64, 64);
-    draw_sprite(128+64, -40 + 28 + (lam_cos(ldpl_timer + (PI * 3/ 4))>>8), bitmap, 64, 64);
+    //draw_sprite(0, 88 + (lam_cos(ldpl_timer)>>8), bitmap, 64, 64);
+    //draw_sprite(64, 88 + (lam_cos(ldpl_timer + (PI / 4))>>8), bitmap, 64, 64);
+    //draw_sprite(128+64, 88 + (lam_cos(ldpl_timer + (PI * 3/ 4))>>8), bitmap, 64, 64);
+    draw_sprite(128, 88 + (lam_cos(ldpl_timer + (PI / 2))>>8), bitmap, 64, 64);
 
 
-    draw_sprite(0, 28 + (lam_sin(ldpl_timer)>>8), bitmap, 64, 64);
+    /*draw_sprite(0, 28 + (lam_sin(ldpl_timer)>>8), bitmap, 64, 64);
     draw_sprite(64, 28 + (lam_sin(ldpl_timer + (PI / 4))>>8), bitmap, 64, 64);
     draw_sprite(128, 28 + (lam_sin(ldpl_timer + (PI / 2))>>8), bitmap, 64, 64);
     draw_sprite(128+64, 28 + (lam_sin(ldpl_timer + (PI * 3/ 4))>>8), bitmap, 64, 64);
@@ -52,28 +53,34 @@ inline void update()
     draw_sprite(128, 40+68 + (lam_cos(ldpl_timer + (PI / 2))>>8), bitmap, 64, 64);
     draw_sprite(128+64, 40+68 + (lam_cos(ldpl_timer + (PI * 3/ 4))>>8), bitmap, 64, 64);*/
 
-    for(uint32 i = 0; i < 240; ++i)
+    /*for(uint32 i = 0; i < 240; ++i)
     {
         set_pixel(i, 80+(lam_sin(ldpl_timer + ((2 * PI) / 240) * i)>>8), 0x1FF);
         set_pixel(i, 81+(lam_sin(ldpl_timer + ((2 * PI) / 240) * i)>>8), 0x1FF);
+    }*/
+
+    for(uint32 i = 0; i < 240; ++i)
+    {
+        uint32 y = 152+(lam_cos(ldpl_timer + ((PI * 3/4) / 240) * i)>>8);
+        for(int32 j = -10; j<=30; ++j)
+        {
+            //Color point_color = screen_buffer[i + (y-j) * screen_width];
+            set_pixel(i, y+j, create_color(0, 5, 30));
+        }
     }
 
     for(uint32 i = 0; i < 240; ++i)
     {
-        uint32 y = 80+(lam_sin(ldpl_timer2 + ((2 * PI) / 240) * i)>>8);
-        Color point_color = 0x1FFF - screen_buffer[i + y * screen_width];
-        set_pixel(i, y, point_color);
-        set_pixel(i, y+1, point_color);
-        set_pixel(i, y+2, point_color);
+        uint32 y = 152+(lam_cos(ldpl_timer + ((PI * 3/4) / 240) * i)>>8);
+        set_pixel(i, y-10, create_color(0, 30, 31));
     }
-
-    for(uint32 i = 0; i < 240; ++i)
+    /*for(uint32 i = 0; i < 240; ++i)
     {
         uint32 y = 80+(lam_sin(ldpl_timer2 + ldpl_timer + ((2 * PI) / 240) * i)>>8);
         Color point_color = 0x1FFF - screen_buffer[i + y * screen_width];
         Color point_color_bw = create_color(point_color, point_color, point_color);
         set_pixel(i, y, point_color_bw);
-    }
+    }*/
 
     ldpl_timer += PI/16;
     ldpl_timer2 += PI/10;
