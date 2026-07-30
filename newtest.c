@@ -1,128 +1,65 @@
+#include "assets/assets.h"
 #include "lamadil.h"
 
-uint32 speed_x = 4;
-uint32 speed_y = 4;
-uint32 x = 50;
-uint32 y = 50;
-uint32 speed_x2 = -4;
-uint32 speed_y2 = 2;
-uint32 x2 = 50;
-uint32 y2 = 50;
-uint32 speed_x3 = 3;
-uint32 speed_y3 = -3;
-uint32 x3 = 50;
-uint32 y3 = 50;
+#define BEEP_SAMPLE_COUNT 2048u
 
-uint32 color = 0;
-uint32 color_speed = 1;
-uint32 color2 = 10;
-uint32 color_speed2 = 1;
-uint32 color3 = 20;
-uint32 color_speed3 = 1;
+static int32_t sprite_x = 88;
+static int32_t sprite_y = 48;
+static uint32_t animation_angle;
+static int8_t beep_samples[BEEP_SAMPLE_COUNT] __attribute__((aligned(4)));
 
-uint32 ldpl_timer = 0;
-uint32 ldpl_timer2 = 0;
-
-inline void start()
+static void make_demo_tone(void)
 {
+    for (uint32_t i = 0; i < BEEP_SAMPLE_COUNT; ++i)
+    {
+        const uint32_t phase = i & 63u;
+        beep_samples[i] = (int8_t)(phase < 32u
+            ? -96 + (int32_t)phase * 6
+            : 96 - (int32_t)(phase - 32u) * 6);
+    }
 }
 
-inline void update()
+void game_start(void)
 {
-    //fill_screen(create_color(color, color2, color3));
+    make_demo_tone();
+}
+
+void game_update(void)
+{
+    if (lamadil_key_down(LAMADIL_KEY_LEFT))
+        --sprite_x;
+    if (lamadil_key_down(LAMADIL_KEY_RIGHT))
+        ++sprite_x;
+    if (lamadil_key_down(LAMADIL_KEY_UP))
+        --sprite_y;
+    if (lamadil_key_down(LAMADIL_KEY_DOWN))
+        ++sprite_y;
+
+    if (lamadil_key_pressed(LAMADIL_KEY_A))
+        lamadil_audio_play(beep_samples, BEEP_SAMPLE_COUNT, 8192u, false);
+    if (lamadil_key_pressed(LAMADIL_KEY_B))
+        lamadil_audio_play(beep_samples, BEEP_SAMPLE_COUNT, 8192u, true);
+    if (lamadil_key_pressed(LAMADIL_KEY_START))
+        lamadil_audio_stop();
+
     fill_screen(create_color(31, 20, 0));
-    
-    //draw_sprite(0, 88 + (lam_cos(ldpl_timer)>>8), bitmap, 64, 64);
-    //draw_sprite(64, 88 + (lam_cos(ldpl_timer + (PI / 4))>>8), bitmap, 64, 64);
-    //draw_sprite(128+64, 88 + (lam_cos(ldpl_timer + (PI * 3/ 4))>>8), bitmap, 64, 64);
-    draw_sprite(128, 88 + (lam_cos(ldpl_timer + (PI / 2))>>8), bitmap, 64, 64);
 
+    const int32_t bob = lam_cos(animation_angle) >> 8;
+    draw_sprite(sprite_x, sprite_y + bob, demo_bitmapBitmap,
+                DEMO_BITMAP_WIDTH, DEMO_BITMAP_HEIGHT);
 
-    /*draw_sprite(0, 28 + (lam_sin(ldpl_timer)>>8), bitmap, 64, 64);
-    draw_sprite(64, 28 + (lam_sin(ldpl_timer + (PI / 4))>>8), bitmap, 64, 64);
-    draw_sprite(128, 28 + (lam_sin(ldpl_timer + (PI / 2))>>8), bitmap, 64, 64);
-    draw_sprite(128+64, 28 + (lam_sin(ldpl_timer + (PI * 3/ 4))>>8), bitmap, 64, 64);
-
-    draw_sprite(0, 68 + (lam_sin(ldpl_timer- (PI))>>8), bitmap, 64, 64);
-    draw_sprite(64, 68 + (lam_sin(ldpl_timer - (PI / 4))>>8), bitmap, 64, 64);
-    draw_sprite(128, 68 + (lam_sin(ldpl_timer - (PI / 2))>>8), bitmap, 64, 64);
-    draw_sprite(128+64, 68 + (lam_sin(ldpl_timer - (PI * 3/ 4))>>8), bitmap, 64, 64);
-
-    draw_sprite(0, 40+68 + (lam_cos(ldpl_timer)>>8), bitmap, 64, 64);
-    draw_sprite(64, 40+68 + (lam_cos(ldpl_timer + (PI / 4))>>8), bitmap, 64, 64);
-    draw_sprite(128, 40+68 + (lam_cos(ldpl_timer + (PI / 2))>>8), bitmap, 64, 64);
-    draw_sprite(128+64, 40+68 + (lam_cos(ldpl_timer + (PI * 3/ 4))>>8), bitmap, 64, 64);*/
-
-    /*for(uint32 i = 0; i < 240; ++i)
+    for (int32_t x = 0; x < LAMADIL_SCREEN_WIDTH; ++x)
     {
-        set_pixel(i, 80+(lam_sin(ldpl_timer + ((2 * PI) / 240) * i)>>8), 0x1FF);
-        set_pixel(i, 81+(lam_sin(ldpl_timer + ((2 * PI) / 240) * i)>>8), 0x1FF);
-    }*/
+        const uint32_t offset =
+            ((LAMADIL_PI * 3u / 4u) / LAMADIL_SCREEN_WIDTH) *
+            (uint32_t)x;
+        const int32_t wave_y =
+            136 + (lam_cos(animation_angle + offset) >> 8);
 
-    for(uint32 i = 0; i < 240; ++i)
-    {
-        uint32 y = 152+(lam_cos(ldpl_timer + ((PI * 3/4) / 240) * i)>>8);
-        for(int32 j = -10; j<=30; ++j)
-        {
-            //Color point_color = screen_buffer[i + (y-j) * screen_width];
-            set_pixel(i, y+j, create_color(0, 5, 30));
-        }
+        for (int32_t thickness = -3; thickness <= 3; ++thickness)
+            set_pixel_clipped(x, wave_y + thickness,
+                              create_color(0, 5, 30));
     }
 
-    for(uint32 i = 0; i < 240; ++i)
-    {
-        uint32 y = 152+(lam_cos(ldpl_timer + ((PI * 3/4) / 240) * i)>>8);
-        set_pixel(i, y-10, create_color(0, 30, 31));
-    }
-    /*for(uint32 i = 0; i < 240; ++i)
-    {
-        uint32 y = 80+(lam_sin(ldpl_timer2 + ldpl_timer + ((2 * PI) / 240) * i)>>8);
-        Color point_color = 0x1FFF - screen_buffer[i + y * screen_width];
-        Color point_color_bw = create_color(point_color, point_color, point_color);
-        set_pixel(i, y, point_color_bw);
-    }*/
-
-    ldpl_timer += PI/16;
-    ldpl_timer2 += PI/10;
-    
-    color += color_speed;
-    if(color == 0 || color == 31) color_speed = -color_speed;
-    color2 += color_speed2;
-    if(color2 == 0 || color2 == 31) color_speed2 = -color_speed2;
-    color3 += color_speed3;
-    if(color3 == 0 || color3 == 31) color_speed3 = -color_speed3;
-
-    /*for(int iy = 0; iy < 32; ++iy){
-        for(int ix = 0; ix < 32; ++ix){
-            set_pixel(x+ix, y+iy, create_color(31-screen_buffer[(x+ix) + (y+iy) * screen_width], 31-screen_buffer[(x+ix) + (y+iy) * screen_width], 31-screen_buffer[(x+ix) + (y+iy) * screen_width]));
-        }
-    }
-    
-    for(int iy = 0; iy < 32; ++iy){
-        for(int ix = 0; ix < 32; ++ix){
-            set_pixel(x2+ix, y2+iy, 0x1FFF-screen_buffer[(x2+ix) + (y2+iy) * screen_width]);
-        }
-    }
-    
-    for(int iy = 0; iy < 32; ++iy){
-        for(int ix = 0; ix < 32; ++ix){
-            set_pixel(x3+ix, y3+iy, create_color(screen_buffer[(x3+ix) + (y3+iy) * screen_width], screen_buffer[(x3+ix) + (y3+iy) * screen_width], screen_buffer[(x3+ix) + (y3+iy) * screen_width]));
-        }
-    }*/
-
-    x += speed_x;
-    y += speed_y;
-    x2 += speed_x2;
-    y2 += speed_y2;
-    x3 += speed_x3;
-    y3 += speed_y3;
-
-    if(x+speed_x <= 0 || x+speed_x >= 240-32) speed_x = -speed_x;
-    if(y+speed_y <= 0 || y+speed_y >= 160-32) speed_y = -speed_y;
-    if(x2+speed_x2 <= 0 || x2+speed_x2 >= 240-32) speed_x2 = -speed_x2;
-    if(y2+speed_y2 <= 0 || y2+speed_y2 >= 160-32) speed_y2 = -speed_y2;
-    
-    if(x3+speed_x3 <= 0 || x3+speed_x3 >= 240-32) speed_x3 = -speed_x3;
-    if(y3+speed_y3 <= 0 || y3+speed_y3 >= 160-32) speed_y3 = -speed_y3;
-
+    animation_angle += LAMADIL_PI / 16u;
 }

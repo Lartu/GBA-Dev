@@ -1,0 +1,7 @@
+*.elf
+*.gba
+*.map
+*.o
+*.sav
+render_test
+/build/

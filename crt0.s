@@ -82,7 +82,7 @@
 @ Comment out the following line to disable interrupt support
 @ in your code and to save some space in this file.
 
-@ .equ __InterruptSupport, 1
+ .equ __InterruptSupport, 1
 
 
 @ Comment out the following line to put interrupt support in
@@ -115,8 +115,8 @@
 @   enable this option. This option uses the main stack instead
 @   of the interrupt stack so you have access to a larger stack.
 
-.equ __FastInterrupts, 1
-@ .equ __SingleInterrupts, 1
+@ .equ __FastInterrupts, 1
+ .equ __SingleInterrupts, 1
 @ .equ __MultipleInterrupts, 1
 
 
