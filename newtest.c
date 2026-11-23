@@ -1,27 +1,17 @@
 #include "assets/assets.h"
 #include "lamadil.h"
-
-#define BEEP_SAMPLE_COUNT 2048u
+#include "soundbank.h"
+#include "soundbank_bin.h"
 
 static int32_t sprite_x = 88;
 static int32_t sprite_y = 48;
 static uint32_t animation_angle;
-static int8_t beep_samples[BEEP_SAMPLE_COUNT] __attribute__((aligned(4)));
-
-static void make_demo_tone(void)
-{
-    for (uint32_t i = 0; i < BEEP_SAMPLE_COUNT; ++i)
-    {
-        const uint32_t phase = i & 63u;
-        beep_samples[i] = (int8_t)(phase < 32u
-            ? -96 + (int32_t)phase * 6
-            : 96 - (int32_t)(phase - 32u) * 6);
-    }
-}
+static bool song_paused;
 
 void game_start(void)
 {
-    make_demo_tone();
+    lamadil_audio_init(soundbank_bin);
+    lamadil_song_play(MOD_FLATOUTLIES, true);
 }
 
 void game_update(void)
@@ -36,11 +26,22 @@ void game_update(void)
         ++sprite_y;
 
     if (lamadil_key_pressed(LAMADIL_KEY_A))
-        lamadil_audio_play(beep_samples, BEEP_SAMPLE_COUNT, 8192u, false);
+        lamadil_sound_play(SFX_BOOM);
     if (lamadil_key_pressed(LAMADIL_KEY_B))
-        lamadil_audio_play(beep_samples, BEEP_SAMPLE_COUNT, 8192u, true);
+        lamadil_sound_play(SFX_AMBULANCE);
     if (lamadil_key_pressed(LAMADIL_KEY_START))
-        lamadil_audio_stop();
+    {
+        if (song_paused)
+            lamadil_song_resume();
+        else
+            lamadil_song_pause();
+        song_paused = !song_paused;
+    }
+    if (lamadil_key_pressed(LAMADIL_KEY_SELECT))
+    {
+        lamadil_song_play(MOD_FLATOUTLIES, true);
+        song_paused = false;
+    }
 
     fill_screen(create_color(31, 20, 0));
 
@@ -54,12 +55,13 @@ void game_update(void)
             ((LAMADIL_PI * 3u / 4u) / LAMADIL_SCREEN_WIDTH) *
             (uint32_t)x;
         const int32_t wave_y =
-            136 + (lam_cos(animation_angle + offset) >> 8);
+            (LAMADIL_SCREEN_HEIGHT - 24) +
+            (lam_cos(animation_angle + offset) >> 8);
 
         for (int32_t thickness = -3; thickness <= 3; ++thickness)
             set_pixel_clipped(x, wave_y + thickness,
                               create_color(0, 5, 30));
     }
 
-    animation_angle += LAMADIL_PI / 16u;
+    animation_angle += LAMADIL_PI / 8u;
 }

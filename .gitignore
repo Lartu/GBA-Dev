@@ -4,4 +4,6 @@
 *.o
 *.sav
 render_test
+render_test_mode4
+render_test_mode5
 /build/

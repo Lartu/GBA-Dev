@@ -4,8 +4,20 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifndef LAMADIL_VIDEO_MODE
+#define LAMADIL_VIDEO_MODE 4
+#endif
+
+#if LAMADIL_VIDEO_MODE == 4
 #define LAMADIL_SCREEN_WIDTH 240
 #define LAMADIL_SCREEN_HEIGHT 160
+#elif LAMADIL_VIDEO_MODE == 5
+#define LAMADIL_SCREEN_WIDTH 160
+#define LAMADIL_SCREEN_HEIGHT 128
+#else
+#error "LAMADIL_VIDEO_MODE must be 4 or 5"
+#endif
+
 #define LAMADIL_SCREEN_PIXELS \
     (LAMADIL_SCREEN_WIDTH * LAMADIL_SCREEN_HEIGHT)
 
@@ -28,15 +40,15 @@ typedef enum LamadilKey
     LAMADIL_KEY_L = 1u << 9
 } LamadilKey;
 
-extern Color screen_buffer[LAMADIL_SCREEN_PIXELS];
-
 void lamadil_init(void);
 void lamadil_present(void);
+void lamadil_set_rendering_enabled(bool enabled);
 
 Color create_color(uint32_t red, uint32_t green, uint32_t blue);
 void fill_screen(Color color);
 void set_pixel(int32_t x, int32_t y, Color color);
 bool set_pixel_clipped(int32_t x, int32_t y, Color color);
+Color lamadil_get_pixel(int32_t x, int32_t y);
 void draw_sprite(int32_t x, int32_t y, const Color *sprite,
                  uint32_t width, uint32_t height);
 
@@ -48,15 +60,25 @@ bool lamadil_key_down(LamadilKey key);
 bool lamadil_key_pressed(LamadilKey key);
 bool lamadil_key_released(LamadilKey key);
 
+typedef uint16_t LamadilSoundHandle;
+
 /*
- * Plays signed 8-bit mono PCM through Direct Sound FIFO A.
- * sample_count must be a multiple of 16. The data must remain alive and
- * word-aligned until playback ends.
+ * Initialize Maxmod with an mmutil-generated soundbank. Eight software
+ * channels are shared between tracker music and sound effects.
  */
-bool lamadil_audio_play(const int8_t *samples, uint32_t sample_count,
-                        uint32_t sample_rate, bool loop);
-void lamadil_audio_stop(void);
-bool lamadil_audio_is_playing(void);
+void lamadil_audio_init(const void *soundbank);
+void lamadil_audio_update(void);
+
+void lamadil_song_play(uint32_t song_id, bool loop);
+void lamadil_song_stop(void);
+void lamadil_song_pause(void);
+void lamadil_song_resume(void);
+bool lamadil_song_is_playing(void);
+void lamadil_song_set_volume(uint32_t volume);
+
+LamadilSoundHandle lamadil_sound_play(uint32_t sound_id);
+void lamadil_sound_stop(LamadilSoundHandle handle);
+void lamadil_sound_stop_all(void);
 
 /* Implement these two callbacks in the game. */
 void game_start(void);

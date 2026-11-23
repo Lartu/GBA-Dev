@@ -1,40 +1,49 @@
 # Lamadil GBA
 
-A tiny, bare-metal Game Boy Advance framework for full-color Mode 3 games.
-It keeps the original project's software framebuffer and beam-racing
-presentation strategy while adding safe drawing, input, and PCM audio.
+A tiny, bare-metal Game Boy Advance framework with page-flipped bitmap
+rendering, input, tracker music, and sound effects.
 
 ## Features
 
-- 240×160, 15-bit Mode 3 software framebuffer in EWRAM
-- DMA3 frame presentation
+- Switchable Mode 4 and Mode 5 page-flipped bitmap backends
+- 240×160 with a fixed RGB332 palette in Mode 4
+- 160×128 with direct 15-bit color in Mode 5
 - Clipped sprites, including negative positions and odd widths
 - Fast unchecked pixels plus a safe clipped-pixel helper
 - Held, pressed, and released state for all ten GBA buttons
-- Signed 8-bit mono PCM through Direct Sound FIFO A, Timer 0, and DMA1
+- MOD, S3M, XM, and IT tracker music through Maxmod
+- WAV sound effects mixed with music
 - Fixed-point sine and cosine lookup functions
 - A host-side renderer test that does not require a GBA emulator
 - Automatic PNG-to-GBA conversion through grit
+- Automatic tracker/WAV soundbank conversion through mmutil
 
 ## Requirements
 
-- A recent [devkitARM](https://devkitpro.org/wiki/Getting_Started)
+- A recent [devkitARM](https://devkitpro.org/wiki/Getting_Started), including
+  Maxmod, mmutil, bin2s, and grit
 - Perl, used by the included ROM-header fixer
 - [mGBA](https://mgba.io/) for `make run`
 - A native C compiler for `make host-test`
 
-If `DEVKITARM` is set, the Makefile uses `$DEVKITARM/bin`. Otherwise it looks
-for `arm-none-eabi-*` tools on `PATH`.
+The Makefile defaults to the standard `/opt/devkitpro` installation. Override
+`DEVKITPRO`, `DEVKITARM`, or `LIBGBA` when using another location.
 
 ## Build
 
 ```sh
-make
+make                    # Mode 4 (default)
+make mode4              # clean Mode 4 build
+make mode5              # clean Mode 5 build
 make run
 make host-test
 ```
 
 `ccompilartu.sh` remains as a convenience wrapper around `make run`.
+
+`VIDEO_MODE` is a build-time switch because Mode 4 and Mode 5 have different
+pixel formats and resolutions. Both modes use the same `Color`, drawing, input,
+and audio API.
 
 ## Assets
 
@@ -53,6 +62,31 @@ Include the generated header through `assets/assets.h` or directly from game
 code. Image dimensions remain game metadata and should be declared alongside
 the asset aliases in `assets/assets.h`.
 
+### Audio assets
+
+Put tracker modules and effects in `assets/audio/`. Supported source extensions
+are `.mod`, `.s3m`, `.xm`, `.it`, and `.wav`. During `make`, mmutil combines
+them into `build/audio/soundbank.bin` and generates `soundbank.h` containing
+numeric identifiers derived from the filenames.
+
+For example, `Overworld.xm` and `Jump.wav` become identifiers resembling
+`MOD_OVERWORLD` and `SFX_JUMP`. Initialize the generated bank and start music
+from `game_start()`:
+
+```c
+#include "soundbank.h"
+#include "soundbank_bin.h"
+
+void game_start(void)
+{
+    lamadil_audio_init(soundbank_bin);
+    lamadil_song_play(MOD_OVERWORLD, true);
+}
+```
+
+Call `lamadil_sound_play(SFX_JUMP)` for a sound effect. Lamadil calls Maxmod's
+per-frame update automatically after `game_update()`.
+
 ## Game callbacks
 
 Include `lamadil.h` and implement:
@@ -62,8 +96,9 @@ void game_start(void);
 void game_update(void);
 ```
 
-The framework polls input immediately before each `game_update()` and presents
-the framebuffer immediately afterward.
+The framework polls input immediately before each `game_update()`. Maxmod is
+serviced at the full GBA frame rate, while drawing and page flipping alternate
+to produce a stable 30 FPS visual update without skipping audio frames.
 
 ## Drawing
 
@@ -74,7 +109,9 @@ potentially off-screen coordinates.
 `draw_sprite()` accepts signed positions and clips all four edges. Sprites are
 arrays of row-major `Color` pixels.
 
-The framebuffer occupies 76,800 bytes of the GBA's 256 KiB EWRAM.
+Rendering goes directly to the hidden VRAM page; `lamadil_present()` swaps that
+page into view. Mode 4 converts 15-bit `Color` values to a fixed RGB332
+palette. Mode 5 retains the original 15-bit values but has a smaller viewport.
 
 ## Input
 
@@ -89,38 +126,39 @@ if (lamadil_key_pressed(LAMADIL_KEY_A))
 Available keys are `A`, `B`, `SELECT`, `START`, `RIGHT`, `LEFT`, `UP`, `DOWN`,
 `R`, and `L`, each prefixed with `LAMADIL_KEY_`.
 
-## PCM audio
+## Music and sound
 
 ```c
-lamadil_audio_play(samples, sample_count, 8192, false);
+lamadil_song_play(MOD_OVERWORLD, true);
+LamadilSoundHandle handle = lamadil_sound_play(SFX_JUMP);
+lamadil_sound_stop(handle);
 ```
 
-Audio data must:
-
-- contain signed 8-bit mono PCM;
-- be aligned to four bytes;
-- contain a multiple of 16 samples;
-- remain allocated until playback finishes.
-
-Supported sample rates are 2,000–32,768 Hz. Passing `true` as the final
-argument loops the sample. `lamadil_audio_stop()` stops it explicitly.
-
-PCM uses DMA1 and timers 0–1. DMA3 is reserved for video presentation.
+Music can be played once or looped, paused, resumed, stopped, and assigned a
+master volume from 0 through 1024. Maxmod shares eight software mixer channels
+between the song and effects. It owns the Direct Sound audio DMA/timers and
+uses Lamadil's VBlank interrupt slot; DMA3 is used for fast page fills.
 
 ## Demo controls
 
 - D-pad: move the bitmap
-- A: play the demo tone once
-- B: loop the demo tone
-- Start: stop audio
+- A: play the explosion effect
+- B: play the ambulance effect
+- Start: pause or resume the tracker song
+- Select: restart the tracker song
+
+Call `lamadil_set_rendering_enabled(false)` when an audio-only screen is useful.
+This forces a blank display and skips framebuffer drawing and DMA3
+presentation while retaining one Maxmod update per hardware frame.
 
 ## Design notes
 
-Mode 3 consumes too much VRAM for hardware page flipping. A complete frame
-also does not comfortably fit inside VBlank. Presentation therefore begins at
-scanline 50 and copies the image top-to-bottom behind the LCD beam. This keeps
-the distinctive approach of the original experiment while DMA3 performs the
-bulk transfer.
+Mode 4 and Mode 5 both fit two bitmap pages in VRAM, so presentation changes a
+display-page bit instead of copying an entire framebuffer. Drawing and page
+flipping occur on alternating hardware frames so Maxmod's mixer remains on its
+required 60 Hz schedule. Mode 4 is the default because it retains the full
+240×160 viewport; Mode 5 is selected when direct 15-bit color matters more
+than resolution.
 
 The included `crt0.s` and `lnkscript` originate from Jeff Frohwein's
 public-domain GBA startup package. Interrupt support is enabled in single
